@@ -3,6 +3,7 @@ using System.Net;
 using Google.Cloud.BigQuery.Storage.V1;
 using Google.Cloud.BigQuery.V2;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 
 namespace bigquery_storage_write_api_high_memory_allocation;
 
@@ -30,6 +31,7 @@ public class Program
 
         for (int i = 0; i < 1_000_000; i++)
         {
+            // this isn't really a "fair" test as the list isn't evaluated until something enumerates over it
             var rows = records.Select(x => new BigQueryInsertRow{ x });
         }
     }
@@ -40,6 +42,7 @@ public class Program
 
         for (int i = 0; i < 1_000_000; i++)
         {
+            // this isn't really a "fair" test as the list isn't evaluated until something enumerates over it
             var rows = records.Select(x => x.ToByteString());
         }
     }
