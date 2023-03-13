@@ -13,7 +13,8 @@ public class Program
         AppDomain.MonitoringIsEnabled = true;
 
         //DoLegacyInsertTest();
-        DoStorageWriteApiTest();
+        //DoStorageWriteApiTest1();
+        DoStorageWriteApiTest2();
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
         Console.WriteLine($"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");
@@ -29,27 +30,30 @@ public class Program
 
         for (int i = 0; i < 1_000_000; i++)
         {
-            var bigQueryInsertRows = records.Select(x => new BigQueryInsertRow{ x });
+            var rows = records.Select(x => new BigQueryInsertRow{ x });
         }
     }
 
-    private static void DoStorageWriteApiTest()
+    private static void DoStorageWriteApiTest1()
     {
         var records = CreateStorageWriteApiList();
 
         for (int i = 0; i < 1_000_000; i++)
         {
-            var protoData = new AppendRowsRequest.Types.ProtoData
-            {
-                WriterSchema = new ProtoSchema
-                {
-                    ProtoDescriptor = WatchtowerRecord.Descriptor.ToProto()
-                },
-                Rows = new ProtoRows
-                {
-                    SerializedRows = { records.Select(x => x.ToByteString()) }
-                }
-            };
+            var rows = records.Select(x => x.ToByteString());
+        }
+    }
+
+    private static void DoStorageWriteApiTest2()
+    {
+        var records = CreateStorageWriteApiList();
+
+        var protoRows = new ProtoRows();
+
+        for (int i = 0; i < 1_000_000; i++)
+        {
+            var rows = records.Select(x => x.ToByteString());
+            protoRows.SerializedRows.AddRange(rows);
         }
     }
 
