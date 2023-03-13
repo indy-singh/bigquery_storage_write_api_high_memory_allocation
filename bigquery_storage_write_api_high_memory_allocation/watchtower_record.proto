@@ -1,0 +1,28 @@
+﻿syntax = "proto3";
+
+
+message WatchtowerRecord
+{
+	int64 minute_bucket = 1;
+	string user_reference = 2;
+	int64 system_id = 3;
+	string application_name = 4;
+	string request_type_name = 5;
+	int64 status_code = 6;
+	int64 revision = 7;
+	string host_name = 8;
+	int64 total_duration = 9;
+	int64 total_square_duration = 10;
+	int64 request_bytes = 11;
+	int64 response_bytes = 12;
+	int64 pg_sessions = 13;
+	int64 sql_sessions = 14;
+	int64 pg_statements = 15;
+	int64 sql_statements = 16;
+	int64 hits = 17;
+	int64 cassandra_statements = 18;
+	string external_application_name = 19;
+	int64 pg_entities = 20;
+	int64 sql_entities = 21;
+	string ip_address = 22;
+}
