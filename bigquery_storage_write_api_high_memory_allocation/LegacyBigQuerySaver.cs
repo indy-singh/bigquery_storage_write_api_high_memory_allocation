@@ -1,31 +1,21 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using Google.Apis.Auth.OAuth2;
-using Google.Cloud.BigQuery.Storage.V1;
 using Google.Cloud.BigQuery.V2;
-using Google.Protobuf;
 
 namespace bigquery_storage_write_api_high_memory_allocation
 {
     public sealed class LegacyBigQuerySaver
     {
-        private bool _started;
-        private CancellationTokenSource _cancellationTokenSource;
         private readonly BigQueryTable _bigQueryTable;
 
-        public LegacyBigQuerySaver()
+        public LegacyBigQuerySaver(GoogleCredential googleCredential, string projectId, string datasetId, string tableId)
         {
-            //var googleCredential = GoogleCredential.FromJson(@"REDACTED");
-            //const string projectId = "REDACTED";
-            //const string datasetId = $"REDACTED";
-            //const string tableId = "REDACTED";
-            //var client = BigQueryClient.Create(projectId: projectId, credential: googleCredential);
-            //_bigQueryTable = client.GetTable(datasetId: datasetId, tableId: tableId);
+            var client = BigQueryClient.Create(projectId: projectId, credential: googleCredential);
+            _bigQueryTable = client.GetTable(datasetId: datasetId, tableId: tableId);
         }
 
-        public void LegacyInsert(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
+        public async Task Insert(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
         {
-            // capacity is not length! This is here to pre-alloc the underlying array, so that it isn't needlessly resized
             var localConcurrentDictionary = new ConcurrentDictionary<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>();
 
             foreach (var item in list)
@@ -62,14 +52,7 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 });
             }
 
-            try
-            {
-                //_bigQueryTable.InsertRows(bigQueryInsertRows);
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("A general error occurred sending calculation stats to big query. Items will be re-queued");
-            }
+            await _bigQueryTable.InsertRowsAsync(bigQueryInsertRows);
         }
     }
 }

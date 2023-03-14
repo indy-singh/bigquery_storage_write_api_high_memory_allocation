@@ -93,7 +93,7 @@ public sealed class WatchtowerBigQueryModel
 
     public WatchtowerRecord ToProtobufRow(Fields fields, Counters counters)
     {
-        var storageWriteApi = new WatchtowerRecord
+        return new WatchtowerRecord
         {
             // this hack is because proto requires it in microseconds.
             // https://cloud.google.com/bigquery/docs/write-api#data_type_conversions
@@ -122,10 +122,5 @@ public sealed class WatchtowerBigQueryModel
             CassandraStatements = counters.CassandraStatements,
             Hits = counters.Hits,
         };
-
-        var calculateSize = storageWriteApi.CalculateSize();
-        Console.WriteLine($"Protobuf size:{calculateSize}");
-
-        return storageWriteApi;
     }
 }

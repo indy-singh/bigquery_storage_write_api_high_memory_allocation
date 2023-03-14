@@ -10,6 +10,15 @@
 		<PackageReference Include="Google.Cloud.BigQuery.V2" Version="3.2.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.22.1" />
 		<PackageReference Include="Google.Protobuf.Tools" Version="3.22.1" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0-preview.2.23128.3" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Update="appsettings.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="creds.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
 		<Exec Command="$(NuGetPackageRoot)\google.protobuf.tools\3.22.1\tools\windows_x64\protoc.exe --csharp_out=.\ watchtower_record.proto" />

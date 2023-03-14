@@ -1,15 +1,25 @@
-﻿using System.Diagnostics;
+﻿using Google.Apis.Auth.OAuth2;
+using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
 
 namespace bigquery_storage_write_api_high_memory_allocation;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         AppDomain.MonitoringIsEnabled = true;
-        // fix the random so we have a repeatability of data.
 
-        new LegacyBigQuerySaver().LegacyInsert(DummyData.Get());
+        var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+        var googleCredential = GoogleCredential.FromFile(@"creds.json");
+        var projectId = config.GetSection("projectId").Value;
+        var datasetId = config.GetSection("datasetId").Value;
+        var tableId = config.GetSection("tableId").Value;
+
+        var tuples = DummyData.Get();
+        var legacyBigQuerySaver = new LegacyBigQuerySaver(googleCredential, projectId, datasetId, tableId);
+
+        var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
         Console.WriteLine($"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");

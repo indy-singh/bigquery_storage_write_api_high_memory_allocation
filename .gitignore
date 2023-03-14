@@ -2,4 +2,5 @@
 bigquery_storage_write_api_high_memory_allocation/bin/
 bigquery_storage_write_api_high_memory_allocation/obj/
 bigquery_storage_write_api_high_memory_allocation.v3.ncrunchsolution.user
-
+bigquery_storage_write_api_high_memory_allocation/creds.json
+bigquery_storage_write_api_high_memory_allocation/appsettings.json
