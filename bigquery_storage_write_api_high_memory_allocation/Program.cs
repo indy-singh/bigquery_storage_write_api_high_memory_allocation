@@ -12,10 +12,11 @@ public class Program
     public static void Main(string[] args)
     {
         AppDomain.MonitoringIsEnabled = true;
+        // fix the random so we have a repeatability of data.
+        var random = new Random(1987);
 
         //DoLegacyInsertTest();
-        //DoStorageWriteApiTest1();
-        DoStorageWriteApiTest2();
+        //DoProtobufInsertTest();
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
         Console.WriteLine($"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");
@@ -36,27 +37,14 @@ public class Program
         }
     }
 
-    private static void DoStorageWriteApiTest1()
+    private static void DoProtobufInsertTest()
     {
-        var records = CreateStorageWriteApiList();
+        var records = CreateLegacyInsertList();
 
         for (int i = 0; i < 1_000_000; i++)
         {
             // this isn't really a "fair" test as the list isn't evaluated until something enumerates over it
-            var rows = records.Select(x => x.ToByteString());
-        }
-    }
-
-    private static void DoStorageWriteApiTest2()
-    {
-        var records = CreateStorageWriteApiList();
-
-        var protoRows = new ProtoRows();
-
-        for (int i = 0; i < 1_000_000; i++)
-        {
-            var rows = records.Select(x => x.ToByteString());
-            protoRows.SerializedRows.AddRange(rows);
+            var rows = records.Select(x => new BigQueryInsertRow { x });
         }
     }
 
