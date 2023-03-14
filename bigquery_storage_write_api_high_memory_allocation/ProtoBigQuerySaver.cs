@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Reflection;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.BigQuery.Storage.V1;
 using Google.Protobuf;
@@ -46,6 +47,25 @@ namespace bigquery_storage_write_api_high_memory_allocation
                     SerializedRows = { bigQueryInsertRows.Select(x => x.ToByteString()) },
                 },
             };
+
+            var fieldInfo = _appendRowsStream.GetType().GetField("_writeBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (fieldInfo is object)
+            {
+                var writeBuffer = fieldInfo.GetValue(_appendRowsStream);
+
+                if (writeBuffer is object)
+                {
+                    var propertyInfo = writeBuffer.GetType().GetProperty("BufferedWriteCount", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                    if (propertyInfo is object)
+                    {
+                        var bufferedWriteCount = propertyInfo.GetValue(writeBuffer);
+
+                        Console.WriteLine(bufferedWriteCount);
+                    }
+                }
+            }
 
             await _appendRowsStream.WriteAsync(new AppendRowsRequest
             {
