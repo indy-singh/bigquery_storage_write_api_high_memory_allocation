@@ -10,19 +10,19 @@ namespace bigquery_storage_write_api_high_memory_allocation
     public sealed class ProtoBigQuerySaver
     {
         private readonly string _writeStreamName;
-        private readonly AppendRowsStream _appendRowsStream;
         private readonly ProtoSchema _writerSchema;
+        private readonly BigQueryWriteClient _bigQueryWriteClientBuilder;
 
         public ProtoBigQuerySaver(GoogleCredential googleCredential, string projectId, string datasetId, string tableId)
         {
             _writeStreamName = WriteStreamName.Format(projectId: projectId, datasetId: datasetId, tableId: tableId, streamId: "_default");
 
-            var bigQueryWriteClientBuilder = new BigQueryWriteClientBuilder
+            _bigQueryWriteClientBuilder = new BigQueryWriteClientBuilder
             {
                 Credential = googleCredential,
             }.Build();
 
-            _appendRowsStream = bigQueryWriteClientBuilder.AppendRows();
+            
 
             _writerSchema = new ProtoSchema
             {
@@ -48,11 +48,30 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 },
             };
 
-            var fieldInfo = _appendRowsStream.GetType().GetField("_writeBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
+            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
+
+            DoThing(appendRowsStream, "a");
+
+            await appendRowsStream.WriteAsync(new AppendRowsRequest
+            {
+                ProtoRows = protoData,
+                WriteStream = _writeStreamName,
+            });
+
+            DoThing(appendRowsStream, "b");
+
+            await appendRowsStream.WriteCompleteAsync();
+
+            DoThing(appendRowsStream, "c");
+        }
+
+        private static void DoThing(AppendRowsStream appendRowsStream, string tag)
+        {
+            var fieldInfo = appendRowsStream.GetType().GetField("_writeBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
 
             if (fieldInfo is object)
             {
-                var writeBuffer = fieldInfo.GetValue(_appendRowsStream);
+                var writeBuffer = fieldInfo.GetValue(appendRowsStream);
 
                 if (writeBuffer is object)
                 {
@@ -62,16 +81,10 @@ namespace bigquery_storage_write_api_high_memory_allocation
                     {
                         var bufferedWriteCount = propertyInfo.GetValue(writeBuffer);
 
-                        Console.WriteLine(bufferedWriteCount);
+                        Console.WriteLine(string.Join("\t", tag, bufferedWriteCount));
                     }
                 }
             }
-
-            await _appendRowsStream.WriteAsync(new AppendRowsRequest
-            {
-                ProtoRows = protoData,
-                WriteStream = _writeStreamName,
-            });
         }
     }
 }

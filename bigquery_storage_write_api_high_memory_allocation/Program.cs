@@ -18,12 +18,11 @@ public class Program
 
         var tuples = DummyData.Get();
         var legacyBigQuerySaver = new LegacyBigQuerySaver(googleCredential, projectId, datasetId, tableId);
-
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
         for (int i = 0; i < 10; i++)
         {
-            await legacyBigQuerySaver.Insert(tuples);
+            await protoBigQuerySaver.Insert(tuples);
             Console.WriteLine($"wait:{i}");
             await Task.Delay(TimeSpan.FromSeconds(1));
             
