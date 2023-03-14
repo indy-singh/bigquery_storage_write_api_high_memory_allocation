@@ -29,16 +29,16 @@ public class Program
         {
             var fields = new Fields
             {
-                MinuteBucket = dayBucket.AddMinutes((int)now.TimeOfDay.TotalMinutes + random.Next(-2 +2)), //smear this around artificially
-                UserReference = guids[random.Next(0, guids.Count)].ToString(),
-                SystemId = 1,
-                ApplicationName = "ApplicationName",
-                RequestTypeName = "RequestTypeName",
-                StatusCode = 1,
-                Revision = 314246,
-                HostName = Environment.MachineName,
-                ExternalApplicationName = "ExternalApplicationName",
-                IpAddress = IPAddress.Any.ToString(),
+                MinuteBucket = dayBucket.AddMinutes((int)now.TimeOfDay.TotalMinutes + random.Next(-2 +2)), // smear this around artificially
+                UserReference = guids[random.Next(0, guids.Count)].ToString(), // in reality this is a set of 1000s
+                SystemId = 1, // in reality this is a set of 20
+                ApplicationName = "ApplicationName", // in reality this is a set of 10
+                RequestTypeName = "RequestTypeName", // in reality this is a set of 1000s
+                StatusCode = 1, // 2xx, 3xx, 4xx, 5xx
+                Revision = 314246, // in reality this is a set of 10-20
+                HostName = Environment.MachineName, // in reality this is a set of 12
+                ExternalApplicationName = "ExternalApplicationName", // in reality this is a set of ~200
+                IpAddress = IPAddress.Any.ToString(), // in reality this is a set of 1000s
             };
             var counters = new Counters
             {
