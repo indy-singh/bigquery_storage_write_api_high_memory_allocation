@@ -43,7 +43,6 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 WriterSchema = _writerSchema,
                 Rows = new ProtoRows
                 {
-                    // https://github.com/protocolbuffers/protobuf/issues/12217 -> ToByteString memory leak
                     SerializedRows = { bigQueryInsertRows.Select(x => x.ToByteString()) },
                 },
             };
