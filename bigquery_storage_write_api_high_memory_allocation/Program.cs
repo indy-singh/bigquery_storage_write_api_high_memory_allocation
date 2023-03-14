@@ -21,12 +21,19 @@ public class Program
 
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
+        for (int i = 0; i < 10; i++)
+        {
+            await legacyBigQuerySaver.Insert(tuples);
+            Console.WriteLine($"wait:{i}");
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            
+        }
+
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
         Console.WriteLine($"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");
         Console.WriteLine($"Peak Working Set: {Process.GetCurrentProcess().PeakWorkingSet64 / 1024:#,#} kb");
 
         for (var index = 0; index <= GC.MaxGeneration; index++)
             Console.WriteLine($"Gen {index} collections: {GC.CollectionCount(index)}");
-
     }
 }

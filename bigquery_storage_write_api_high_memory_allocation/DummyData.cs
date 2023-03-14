@@ -11,21 +11,16 @@ public static class DummyData
         var list = new List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>>();
         var now = DateTime.UtcNow;
         var dayBucket = now.Date;
-        var guids = new List<Guid>();
 
-        for (int i = 0; i < 5000; i++)
+        for (int x = 0; x < 5_000; x++)
         {
             var buffer = new byte[16];
             random.NextBytes(buffer);
-            guids.Add(new Guid(buffer));
-        }
 
-        for (int x = 0; x < 30_000; x++)
-        {
             var fields = new WatchtowerBigQueryModel.Fields
             {
                 MinuteBucket = dayBucket.AddMinutes((int)now.TimeOfDay.TotalMinutes + random.Next(-2 + 2)), // smear this around artificially
-                UserReference = guids[random.Next(0, guids.Count)].ToString(), // in reality this is a set of 1000s
+                UserReference = new Guid(buffer).ToString(), // in reality this is a set of 1000s
                 SystemId = 1, // in reality this is a set of 20
                 ApplicationName = "ApplicationName", // in reality this is a set of 10
                 RequestTypeName = "RequestTypeName", // in reality this is a set of 1000s

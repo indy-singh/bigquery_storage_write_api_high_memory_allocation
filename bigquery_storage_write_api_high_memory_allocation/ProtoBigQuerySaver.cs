@@ -31,37 +31,11 @@ namespace bigquery_storage_write_api_high_memory_allocation
 
         public async Task Insert(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
         {
-            var localConcurrentDictionary = new ConcurrentDictionary<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>();
+            var bigQueryInsertRows = new List<WatchtowerRecord>();
 
-            foreach (var item in list)
+            foreach (var pair in list)
             {
-                (WatchtowerBigQueryModel.Fields key, WatchtowerBigQueryModel.Counters value) = item;
-
-                WatchtowerBigQueryModel.Counters UpdateValueFactory(WatchtowerBigQueryModel.Fields existingKey, WatchtowerBigQueryModel.Counters existingValue)
-                {
-                    existingValue.TotalDuration += value.TotalDuration;
-                    existingValue.TotalSquareDuration += value.TotalSquareDuration;
-                    existingValue.RequestBytes += value.RequestBytes;
-                    existingValue.ResponseBytes += value.ResponseBytes;
-                    existingValue.PgSessions += value.PgSessions;
-                    existingValue.SqlSessions += value.SqlSessions;
-                    existingValue.PgStatements += value.PgStatements;
-                    existingValue.SqlStatements += value.SqlStatements;
-                    existingValue.PgEntities += value.PgEntities;
-                    existingValue.SqlEntities += value.SqlEntities;
-                    existingValue.CassandraStatements += value.CassandraStatements;
-                    existingValue.Hits += value.Hits;
-                    return existingValue;
-                }
-
-                localConcurrentDictionary.AddOrUpdate(key, value, UpdateValueFactory);
-            }
-
-            var bigQueryInsertRows = new List<WatchtowerRecord>(capacity: localConcurrentDictionary.Count);
-
-            foreach (var pair in localConcurrentDictionary)
-            {
-                bigQueryInsertRows.Add(new WatchtowerBigQueryModel().ToProtobufRow(pair.Key, pair.Value));
+                bigQueryInsertRows.Add(new WatchtowerBigQueryModel().ToProtobufRow(pair.Item1, pair.Item2));
             }
 
             var protoData = new AppendRowsRequest.Types.ProtoData
