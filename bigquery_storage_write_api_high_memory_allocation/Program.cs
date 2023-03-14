@@ -8,7 +8,8 @@ public class Program
     {
         AppDomain.MonitoringIsEnabled = true;
         // fix the random so we have a repeatability of data.
-        DummyData.Get();
+
+        new LegacyBigQuerySaver().LegacyInsert(DummyData.Get());
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
         Console.WriteLine($"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");

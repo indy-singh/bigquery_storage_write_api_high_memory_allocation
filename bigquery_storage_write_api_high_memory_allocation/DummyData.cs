@@ -4,7 +4,7 @@ namespace bigquery_storage_write_api_high_memory_allocation;
 
 public static class DummyData
 {
-    public static void Get()
+    public static List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> Get()
     {
         var random = new Random(1987);
 
@@ -52,5 +52,7 @@ public static class DummyData
             };
             list.Add(Tuple.Create(fields, counters));
         }
+
+        return list;
     }
 }
