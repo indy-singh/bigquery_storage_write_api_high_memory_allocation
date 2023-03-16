@@ -12,7 +12,7 @@ public static class DummyData
         var now = DateTime.UtcNow;
         var dayBucket = now.Date;
 
-        for (int x = 0; x < 5_000; x++)
+        for (int x = 0; x < 50_000; x++)
         {
             var buffer = new byte[16];
             random.NextBytes(buffer);
