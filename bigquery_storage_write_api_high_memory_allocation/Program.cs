@@ -20,12 +20,12 @@ public class Program
         var legacyBigQuerySaver = new LegacyBigQuerySaver(googleCredential, projectId, datasetId, tableId);
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
-        for (int i = 0; i < 10; i++)
+        for (var index = 0; index < tuples.Count; index++)
         {
-            await protoBigQuerySaver.Insert(tuples);
-            Console.WriteLine($"wait:{i}");
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            
+            var tuple = tuples[index];
+            await protoBigQuerySaver.Insert(tuple);
+            await Task.Delay(TimeSpan.FromMilliseconds(50));
+            Console.WriteLine($"{index:D4}/{tuples.Count}\t{AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");
         }
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
