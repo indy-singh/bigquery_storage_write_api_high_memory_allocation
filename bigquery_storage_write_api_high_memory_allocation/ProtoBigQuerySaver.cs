@@ -2,6 +2,7 @@
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.BigQuery.Storage.V1;
 using Google.Protobuf;
+using Microsoft.IO;
 
 namespace bigquery_storage_write_api_high_memory_allocation
 {
@@ -20,8 +21,6 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 Credential = googleCredential,
             }.Build();
 
-            
-
             _writerSchema = new ProtoSchema
             {
                 ProtoDescriptor = WatchtowerRecord.Descriptor.ToProto(),
@@ -37,10 +36,6 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 bigQueryInsertRows.Add(new WatchtowerBigQueryModel().ToProtobufRow(pair.Item1, pair.Item2));
             }
 
-            Console.WriteLine(bigQueryInsertRows.Sum(x => x.CalculateSize()));
-
-            //return;
-
             var protoData = new AppendRowsRequest.Types.ProtoData
             {
                 WriterSchema = _writerSchema,
@@ -50,16 +45,7 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 },
             };
 
-            var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(5000));
-            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows(CallSettings.FromCancellationToken(cancellationTokenSource.Token));
-
-            var appendResultsHandlerTask = Task.Run(async () =>
-            {
-                await foreach (var response in appendRowsStream.GetResponseStream())
-                {
-                    Console.WriteLine($"Appending rows resulted in: {response}");
-                }
-            });
+            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
 
             await appendRowsStream.WriteAsync(new AppendRowsRequest
             {
@@ -68,7 +54,37 @@ namespace bigquery_storage_write_api_high_memory_allocation
             });
 
             await appendRowsStream.WriteCompleteAsync();
-            await appendResultsHandlerTask;
+        }
+
+        public async Task InsertInChunks(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
+        {
+            var watchtowerBigQueryModel = new WatchtowerBigQueryModel();
+
+            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
+
+            // we pick chunks of 400 because that keeps well below the 81,920 threshold
+            // https://referencesource.microsoft.com/#mscorlib/system/io/stream.cs,53
+            foreach (var chunk in list.Chunk(400))
+            {
+                var watchtowerRecords = chunk.Select(x => watchtowerBigQueryModel.ToProtobufRow(x.Item1, x.Item2));
+
+                var protoData = new AppendRowsRequest.Types.ProtoData
+                {
+                    WriterSchema = _writerSchema,
+                    Rows = new ProtoRows
+                    {
+                        SerializedRows = { watchtowerRecords.Select(x => x.ToByteString()) },
+                    },
+                };
+
+                await appendRowsStream.WriteAsync(new AppendRowsRequest
+                {
+                    ProtoRows = protoData,
+                    WriteStream = _writeStreamName,
+                });
+            }
+
+            await appendRowsStream.WriteCompleteAsync();
         }
     }
 }

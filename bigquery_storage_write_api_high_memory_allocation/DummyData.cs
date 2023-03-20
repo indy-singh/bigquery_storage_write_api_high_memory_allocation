@@ -4,7 +4,7 @@ namespace bigquery_storage_write_api_high_memory_allocation;
 
 public static class DummyData
 {
-    public static List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> Get()
+    public static List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> Get(string needle)
     {
         var random = new Random(1987);
 
@@ -12,7 +12,7 @@ public static class DummyData
         var now = DateTime.UtcNow;
         var dayBucket = now.Date;
 
-        for (int x = 0; x < 50_000; x++)
+        for (int x = 0; x < 5_000; x++)
         {
             var buffer = new byte[16];
             random.NextBytes(buffer);
@@ -26,7 +26,7 @@ public static class DummyData
                 RequestTypeName = "RequestTypeName", // in reality this is a set of 1000s
                 StatusCode = 1, // 2xx, 3xx, 4xx, 5xx
                 Revision = 314246, // in reality this is a set of 10-20
-                HostName = Environment.MachineName, // in reality this is a set of 12
+                HostName = needle, // in reality this is a set of 12
                 ExternalApplicationName = "ExternalApplicationName", // in reality this is a set of ~200
                 IpAddress = IPAddress.Any.ToString(), // in reality this is a set of 1000s
             };

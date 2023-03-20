@@ -16,15 +16,14 @@ public class Program
         var datasetId = config.GetSection("datasetId").Value;
         var tableId = config.GetSection("tableId").Value;
 
-        var tuples = DummyData.Get();
-        var legacyBigQuerySaver = new LegacyBigQuerySaver(googleCredential, projectId, datasetId, tableId);
+        var tuples = DummyData.Get("RED_1");
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
 
-        for (int i = 0; i < 10000; i++)
+        for (int i = 0; i < 100; i++)
         {
-            await protoBigQuerySaver.Insert(tuples);
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await protoBigQuerySaver.InsertInChunks(tuples);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
             Console.WriteLine(string.Join("\t", i, $"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb"));
         }
 
