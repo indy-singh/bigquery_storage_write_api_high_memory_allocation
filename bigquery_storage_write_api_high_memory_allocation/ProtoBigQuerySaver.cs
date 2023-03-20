@@ -1,8 +1,6 @@
-﻿using Google.Api.Gax.Grpc;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Google.Cloud.BigQuery.Storage.V1;
 using Google.Protobuf;
-using Microsoft.IO;
 
 namespace bigquery_storage_write_api_high_memory_allocation
 {

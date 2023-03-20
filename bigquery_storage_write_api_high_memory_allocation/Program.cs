@@ -16,7 +16,8 @@ public class Program
         var datasetId = config.GetSection("datasetId").Value;
         var tableId = config.GetSection("tableId").Value;
 
-        var tuples = DummyData.Get("RED_1");
+        // user provided needle so we can assert the count in BQ when using batch insert
+        var tuples = DummyData.Get("RED_2");
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
 
