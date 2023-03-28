@@ -20,10 +20,9 @@ public class Program
         var tuples = DummyData.Get("RED_2");
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
 
-
         for (int i = 0; i < 100; i++)
         {
-            await protoBigQuerySaver.InsertInChunks(tuples);
+            await protoBigQuerySaver.Insert(tuples);
             await Task.Delay(TimeSpan.FromMilliseconds(100));
             Console.WriteLine(string.Join("\t", i, $"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb"));
         }

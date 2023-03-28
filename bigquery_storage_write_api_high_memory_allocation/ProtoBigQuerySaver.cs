@@ -25,53 +25,25 @@ namespace bigquery_storage_write_api_high_memory_allocation
             };
         }
 
-        public async Task Insert(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
+        public async Task Insert(List<Tuple<Fields, Counters>> list)
         {
             var bigQueryInsertRows = new List<WatchtowerRecord>();
 
             foreach (var pair in list)
             {
-                bigQueryInsertRows.Add(new WatchtowerBigQueryModel().ToProtobufRow(pair.Item1, pair.Item2));
+                bigQueryInsertRows.Add(ToProtobufRow(pair.Item1, pair.Item2));
             }
 
-            var protoData = new AppendRowsRequest.Types.ProtoData
-            {
-                WriterSchema = _writerSchema,
-                Rows = new ProtoRows
-                {
-                    SerializedRows = { bigQueryInsertRows.Select(x => x.ToByteString()) },
-                },
-            };
-
             var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
 
-            await appendRowsStream.WriteAsync(new AppendRowsRequest
+            foreach (var records in bigQueryInsertRows.Chunk(400))
             {
-                ProtoRows = protoData,
-                WriteStream = _writeStreamName,
-            });
-
-            await appendRowsStream.WriteCompleteAsync();
-        }
-
-        public async Task InsertInChunks(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
-        {
-            var watchtowerBigQueryModel = new WatchtowerBigQueryModel();
-
-            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
-
-            // we pick chunks of 400 because that keeps well below the 81,920 threshold
-            // https://referencesource.microsoft.com/#mscorlib/system/io/stream.cs,53
-            foreach (var chunk in list.Chunk(400))
-            {
-                var watchtowerRecords = chunk.Select(x => watchtowerBigQueryModel.ToProtobufRow(x.Item1, x.Item2));
-
                 var protoData = new AppendRowsRequest.Types.ProtoData
                 {
                     WriterSchema = _writerSchema,
                     Rows = new ProtoRows
                     {
-                        SerializedRows = { watchtowerRecords.Select(x => x.ToByteString()) },
+                        SerializedRows = { records.Select(x => x.ToByteString()) },
                     },
                 };
 
@@ -79,10 +51,43 @@ namespace bigquery_storage_write_api_high_memory_allocation
                 {
                     ProtoRows = protoData,
                     WriteStream = _writeStreamName,
-                });
+                }).ConfigureAwait(false);
             }
 
-            await appendRowsStream.WriteCompleteAsync();
+            await appendRowsStream.WriteCompleteAsync().ConfigureAwait(false);
+        }
+
+        private static WatchtowerRecord ToProtobufRow(Fields fields, Counters counters)
+        {
+            return new WatchtowerRecord
+            {
+                // this hack is because proto requires it in microseconds.
+                // https://cloud.google.com/bigquery/docs/write-api#data_type_conversions
+                // NET6 doesn't have ToUnixMicroseconds, but NET/78+ does.
+                MinuteBucket = new DateTimeOffset(fields.MinuteBucket).ToUnixTimeMilliseconds() * 1000,
+                UserReference = fields.UserReference,
+                SystemId = fields.SystemId,
+                ApplicationName = fields.ApplicationName,
+                RequestTypeName = fields.RequestTypeName,
+                StatusCode = fields.StatusCode,
+                Revision = fields.Revision,
+                HostName = fields.HostName,
+                ExternalApplicationName = fields.ExternalApplicationName,
+                IpAddress = fields.IpAddress,
+
+                TotalDuration = counters.TotalDuration,
+                TotalSquareDuration = counters.TotalSquareDuration,
+                RequestBytes = counters.RequestBytes,
+                ResponseBytes = counters.ResponseBytes,
+                PgSessions = counters.PgSessions,
+                SqlSessions = counters.SqlSessions,
+                PgStatements = counters.PgStatements,
+                SqlStatements = counters.SqlStatements,
+                PgEntities = counters.PgEntities,
+                SqlEntities = counters.SqlEntities,
+                CassandraStatements = counters.CassandraStatements,
+                Hits = counters.Hits,
+            };
         }
     }
 }
