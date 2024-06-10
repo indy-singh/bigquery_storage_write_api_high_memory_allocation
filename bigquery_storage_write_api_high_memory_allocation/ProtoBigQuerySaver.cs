@@ -1,4 +1,5 @@
-﻿using Google.Apis.Auth.OAuth2;
+﻿using Google.Api.Gax.Grpc;
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.BigQuery.Storage.V1;
 using Google.Protobuf;
 
@@ -17,6 +18,7 @@ namespace bigquery_storage_write_api_high_memory_allocation
             _bigQueryWriteClientBuilder = new BigQueryWriteClientBuilder
             {
                 Credential = googleCredential,
+                //GrpcAdapter = GrpcCoreAdapter.Instance
             }.Build();
 
             _writerSchema = new ProtoSchema
@@ -25,69 +27,46 @@ namespace bigquery_storage_write_api_high_memory_allocation
             };
         }
 
-        public async Task Insert(List<Tuple<Fields, Counters>> list)
+        public async Task Insert(List<Tuple<WatchtowerBigQueryModel.Fields, WatchtowerBigQueryModel.Counters>> list)
         {
             var bigQueryInsertRows = new List<WatchtowerRecord>();
 
             foreach (var pair in list)
             {
-                bigQueryInsertRows.Add(ToProtobufRow(pair.Item1, pair.Item2));
+                bigQueryInsertRows.Add(new WatchtowerBigQueryModel().ToProtobufRow(pair.Item1, pair.Item2));
             }
 
-            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows();
-
-            foreach (var records in bigQueryInsertRows.Chunk(400))
+            var protoData = new AppendRowsRequest.Types.ProtoData
             {
-                var protoData = new AppendRowsRequest.Types.ProtoData
+                WriterSchema = _writerSchema,
+                Rows = new ProtoRows
                 {
-                    WriterSchema = _writerSchema,
-                    Rows = new ProtoRows
-                    {
-                        SerializedRows = { records.Select(x => x.ToByteString()) },
-                    },
-                };
+                    SerializedRows = { bigQueryInsertRows.Select(x => x.ToByteString()) },
+                },
+            };
 
-                await appendRowsStream.WriteAsync(new AppendRowsRequest
-                {
-                    ProtoRows = protoData,
-                    WriteStream = _writeStreamName,
-                }).ConfigureAwait(false);
-            }
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows(CallSettings.FromCancellationToken(cancellationTokenSource.Token));
+
+            await appendRowsStream.WriteAsync(new AppendRowsRequest
+            {
+                ProtoRows = protoData,
+                WriteStream = _writeStreamName,
+            });
 
             await appendRowsStream.WriteCompleteAsync().ConfigureAwait(false);
-        }
 
-        private static WatchtowerRecord ToProtobufRow(Fields fields, Counters counters)
-        {
-            return new WatchtowerRecord
+            // this is disposable and recommended here: https://github.com/googleapis/google-cloud-dotnet/issues/10034#issuecomment-1491902289
+            var responseStream = appendRowsStream.GetResponseStream();
+            await using (responseStream)
             {
-                // this hack is because proto requires it in microseconds.
-                // https://cloud.google.com/bigquery/docs/write-api#data_type_conversions
-                // NET6 doesn't have ToUnixMicroseconds, but NET/78+ does.
-                MinuteBucket = new DateTimeOffset(fields.MinuteBucket).ToUnixTimeMilliseconds() * 1000,
-                UserReference = fields.UserReference,
-                SystemId = fields.SystemId,
-                ApplicationName = fields.ApplicationName,
-                RequestTypeName = fields.RequestTypeName,
-                StatusCode = fields.StatusCode,
-                Revision = fields.Revision,
-                HostName = fields.HostName,
-                ExternalApplicationName = fields.ExternalApplicationName,
-                IpAddress = fields.IpAddress,
+                // need to consume the response even if we don't do anything with it
+                // other slow ass memory leak: https://github.com/googleapis/google-cloud-dotnet/issues/10034#issuecomment-1491449182
+                await foreach (var appendRowsResponse in responseStream)
+                {
 
-                TotalDuration = counters.TotalDuration,
-                TotalSquareDuration = counters.TotalSquareDuration,
-                RequestBytes = counters.RequestBytes,
-                ResponseBytes = counters.ResponseBytes,
-                PgSessions = counters.PgSessions,
-                SqlSessions = counters.SqlSessions,
-                PgStatements = counters.PgStatements,
-                SqlStatements = counters.SqlStatements,
-                PgEntities = counters.PgEntities,
-                SqlEntities = counters.SqlEntities,
-                CassandraStatements = counters.CassandraStatements,
-                Hits = counters.Hits,
-            };
+                }
+            }
         }
     }
 }

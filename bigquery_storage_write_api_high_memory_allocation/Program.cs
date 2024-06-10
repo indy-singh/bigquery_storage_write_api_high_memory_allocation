@@ -1,5 +1,6 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using Microsoft.Extensions.Configuration;
 
 namespace bigquery_storage_write_api_high_memory_allocation;
@@ -10,21 +11,32 @@ public class Program
     {
         AppDomain.MonitoringIsEnabled = true;
 
+        //_ = new MyListener();
+
         var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         var googleCredential = GoogleCredential.FromFile(@"creds.json");
         var projectId = config.GetSection("projectId").Value;
         var datasetId = config.GetSection("datasetId").Value;
         var tableId = config.GetSection("tableId").Value;
 
-        // user provided needle so we can assert the count in BQ when using batch insert
-        var tuples = DummyData.Get("RED_2");
+        var tuples = DummyData.Get();
         var protoBigQuerySaver = new ProtoBigQuerySaver(googleCredential, projectId, datasetId, tableId);
+        var loop = 100;
 
-        for (int i = 0; i < 100; i++)
+        for (var index = 0; index < loop; index++)
         {
-            await protoBigQuerySaver.Insert(tuples);
-            await Task.Delay(TimeSpan.FromMilliseconds(100));
-            Console.WriteLine(string.Join("\t", i, $"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb"));
+            try
+            {
+                await protoBigQuerySaver.Insert(tuples);
+                var format = string.Join("\t", $"SUCCESS:{index:D5}/{loop:D5}", DateTimeOffset.UtcNow.ToString("O"), $"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb");
+                Console.WriteLine(format);
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+            catch (Exception exception)
+            {
+                var format = string.Join("\t", $"FAILURE:{index:D5}/{loop:D5}", DateTimeOffset.UtcNow.ToString("O"), $"Allocated: {AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize / 1024:#,#} kb", exception.ToString());
+                Console.WriteLine(format);
+            }
         }
 
         Console.WriteLine($"Took: {AppDomain.CurrentDomain.MonitoringTotalProcessorTime.TotalMilliseconds:#,###} ms");
@@ -33,5 +45,23 @@ public class Program
 
         for (var index = 0; index <= GC.MaxGeneration; index++)
             Console.WriteLine($"Gen {index} collections: {GC.CollectionCount(index)}");
+    }
+}
+
+public sealed class MyListener : EventListener
+{
+    protected override void OnEventSourceCreated(EventSource eventSource)
+    {
+        if ("Private.InternalDiagnostics.System.Net.Quic".Equals(eventSource.Name))
+        {
+            EnableEvents(eventSource, EventLevel.LogAlways, EventKeywords.All);
+        }
+    }
+
+    protected override void OnEventWritten(EventWrittenEventArgs eventData)
+    {
+        Console.WriteLine($"{DateTime.UtcNow:ss:fff} {eventData.EventName}: " +
+                          string.Join(' ', eventData.PayloadNames!.Zip(eventData.Payload!).Select(pair => $"{pair.First}={pair.Second}")));
+
     }
 }
