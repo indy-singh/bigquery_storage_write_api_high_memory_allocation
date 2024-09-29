@@ -46,7 +46,7 @@ namespace bigquery_storage_write_api_high_memory_allocation
             };
 
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows(CallSettings.FromCancellationToken(cancellationTokenSource.Token));
+            using var appendRowsStream = _bigQueryWriteClientBuilder.AppendRows(CallSettings.FromCancellationToken(cancellationTokenSource.Token));
 
             await appendRowsStream.WriteAsync(new AppendRowsRequest
             {
@@ -57,7 +57,7 @@ namespace bigquery_storage_write_api_high_memory_allocation
             await appendRowsStream.WriteCompleteAsync().ConfigureAwait(false);
 
             // this is disposable and recommended here: https://github.com/googleapis/google-cloud-dotnet/issues/10034#issuecomment-1491902289
-            var responseStream = appendRowsStream.GetResponseStream();
+            await using var responseStream = appendRowsStream.GetResponseStream();
             await using (responseStream)
             {
                 // need to consume the response even if we don't do anything with it
